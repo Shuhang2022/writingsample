@@ -1,0 +1,207 @@
+---
+title: "Final Project/writing sample"
+author: "shuhang"
+date: "2023-04-06"
+output:
+  html_document:
+    df_print: paged
+  pdf_document:
+    latex_engine: xelatex
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+
+library(lubridate)
+library(tidyverse)
+library(readxl)
+library(leaflet)  #leaflet map plot
+library(leafletCN) #geojsonMap 
+
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+###did_hst_pass(city overall)
+```{r 1}
+df <- read_excel("dd_hst_gdp.xlsx")
+
+df2 <- pivot_longer(!year, names_to = 'city', values_to = 'gdp', data=df)
+ggplot(df2, aes(year, gdp, group=city, color=city)) + 
+  geom_line()+
+  geom_vline(xintercept=2009,linetype=5) +
+  geom_vline(xintercept=2010)+
+  labs(x = "Years(2007-2013)", y = "GDP(100 million RMB)", title = "Comparision of Annual GDP split by City (overall)")+
+  annotate(x=2009,y=+Inf,label="build",vjust=1,geom="label")+
+  annotate(x=2010,y=+Inf,label="open",vjust=1,geom="label")
+
+##DD from build
+df3 <- df[-6:-7,]
+df3 <- df3[-1:-2,]
+df4 <- df3 %>% mutate(gdp_dd = huzhou_gdp+806.46)
+df5 <- pivot_longer(!year, names_to = 'city', values_to = 'gdp', data=df4)
+ggplot(df5, aes(year, gdp, group=city, color=city)) + 
+  geom_line()+
+  geom_vline(xintercept=2009,linetype=5) +
+  geom_vline(xintercept=2010)+
+  labs(x = "Years(2009-2011)", y = "GDP(100 million RMB)", title = "DID of Annual GDP split by City with treatment effect")+
+  annotate(x=2009,y=+Inf,label="build",vjust=1,geom="label")+
+  annotate(x=2010,y=+Inf,label="open",vjust=1,geom="label")
+
+
+##DD from open
+df6 <- df3[-1,]
+df7 <- df6 %>% mutate(gdp_dd = huzhou_gdp+998.47)
+df8 <- pivot_longer(!year, names_to = 'city', values_to = 'gdp', data=df7)
+ggplot(df8, aes(year, gdp, group=city, color=city)) + 
+  geom_line()+
+  geom_vline(xintercept=2010)+
+  labs(x = "Years(2007-2013)", y = "GDP(100 million RMB)", title = "Comparision of Annual GDP split by City with treatment effect")+
+  annotate(x=2010,y=+Inf,label="open",vjust=1,geom="label")
+
+
+```
+
+###did_hst_pass(city urban)
+```{r 2}
+urban <- read_excel("dd_hst_gdp_urban.xlsx")
+urban2 <- pivot_longer(!year, names_to = 'city', values_to = 'gdp', data=urban)
+ggplot(urban2, aes(year, gdp, group=city, color=city)) + 
+  geom_line()+
+  geom_vline(xintercept=2009,linetype=5) +
+  geom_vline(xintercept=2010)+
+  labs(x = "Years(2007-2013)", y = "GDP(100 million RMB)", title = "")+
+  annotate(x=2009,y=+Inf,label="build",vjust=1,geom="label")+
+  annotate(x=2010,y=+Inf,label="open",vjust=1,geom="label")
+```
+
+###did_hst_pass(suburban)
+```{r 3}
+county <- read_excel("county_gdp.xlsx")
+county2 <- pivot_longer(!year, names_to = 'city', values_to = 'gdp', data=county)
+ggplot(county2, aes(year, gdp, group=city, color=city)) + 
+  geom_line()+
+  geom_vline(xintercept=2009,linetype=5) +
+  geom_vline(xintercept=2010)+
+  labs(x = "Years(2007-2013)", y = "GDP(100 million RMB)", title = "")+
+  annotate(x=2009,y=+Inf,label="build",vjust=1,geom="label")+
+  annotate(x=2010,y=+Inf,label="open",vjust=1,geom="label")
+
+##DD from build
+county3 <- county[-6:-7,]
+county3 <- county3[-1:-2,]
+county4 <- county3 %>% mutate(gdp_dd = anji_H_gdp+175.64)
+county5 <- pivot_longer(!year, names_to = 'city', values_to = 'gdp', data=county4)
+ggplot(county5, aes(year, gdp, group=city, color=city)) + 
+  geom_line()+
+  geom_vline(xintercept=2009,linetype=5) +
+  geom_vline(xintercept=2010)+
+  labs(x = "Years(2009-2011)", y = "GDP(100 million RMB)", title = "")+
+  annotate(x=2009,y=+Inf,label="build",vjust=1,geom="label")+
+  annotate(x=2010,y=+Inf,label="open",vjust=1,geom="label")
+
+
+##DD from open
+county6 <- county3[-1,]
+county7 <- county6 %>% mutate(gdp_dd = anji_H_gdp+219.12)
+county8 <- pivot_longer(!year, names_to = 'city', values_to = 'gdp', data=county7)
+ggplot(county8, aes(year, gdp, group=city, color=city)) + 
+  geom_line()+
+  geom_vline(xintercept=2010)+
+  labs(x = "Years(2007-2013)", y = "GDP(100 million RMB)", title = "")+
+  annotate(x=2010,y=+Inf,label="open",vjust=1,geom="label")
+```
+
+###did_hst_pass(compare_urbanvssub)
+```{r 4}
+cpmare <- read_excel("cpmare_gdp_cityvssub.xlsx")
+cpmare2 <- pivot_longer(!year, names_to = 'city', values_to = 'gdp', data=cpmare)
+ggplot(cpmare2, aes(year, gdp, group=city, color=city)) + 
+  geom_line()+
+  geom_vline(xintercept=2009,linetype=5) +
+  geom_vline(xintercept=2010)+
+  labs(x = "Years(2007-2013)", y = "GDP(100 million RMB)", title = "")+
+  annotate(x=2009,y=+Inf,label="build",vjust=1,geom="label")+
+  annotate(x=2010,y=+Inf,label="open",vjust=1,geom="label")
+```
+
+##map
+```{r 5}
+dat1 <- data.frame(name = regionNames("嘉兴")[6], value = runif(18))
+geojsonMap(dat1, mapName = "嘉兴", palette = "RdBu", colorMethod = "bin")
+
+dat2 <- data.frame(name = regionNames("湖州")[1], value = runif(18))
+geojsonMap(dat2, mapName = "湖州", palette = "RdBu", colorMethod = "bin")
+
+```
+
+
+##math process city
+```{r 6}
+data <- read_excel("dd_hst_gdp.xlsx")
+data2 <- pivot_longer(!year, names_to = 'city', values_to = 'gdp', data=data)
+
+data2$city <- ifelse(data2$city == "jiaxing_gdp" ,1, 0)
+data2$year <- ifelse(data2$year > 2009 ,1, 0)
+
+data3 <- data2 %>% filter(city == 0 , year == 0) # difference c == 0 huzhou before
+model1 <- lm(gdp ~ year+city+year:city, data = data3)
+effect1 <- summary(model1)$coef[1]
+
+data3 <- data2 %>% filter(city == 0 , year == 1) # difference c == 0 huzhou after
+model2 <- lm(gdp ~ year+city+year:city, data = data3)
+effect2 <- summary(model2)$coef[1]
+
+data3 <- data2 %>% filter(city == 1 ,
+                          year == 0) # difference c == 1 jiaxing before
+model3 <- lm(gdp ~ year+city+year:city, data = data3)
+effect3 <- summary(model3)$coef[1]
+
+data3 <- data2 %>% filter(city == 1 , year == 1) # difference c == 1 jiaxing after
+model4 <- lm(gdp ~ year+city+year:city, data = data3)
+effect4 <- summary(model4)$coef[1]
+
+estimate_effect <- (effect4-effect3)-(effect2-effect1)
+estimate_effect
+
+effect4
+
+```
+
+##math process sub
+```{r 7}
+data <- read_excel("county_gdp.xlsx")
+
+data2 <- pivot_longer(!year, names_to = 'city', values_to = 'gdp', data=data)
+
+data2$city <- ifelse(data2$city == "tongxinag_J_gdp" ,1, 0)
+data2$year <- ifelse(data2$year > 2009 ,1, 0)
+
+data3 <- data2 %>% filter(city == 0 , year == 0) # difference c == 0 anji before
+model1 <- lm(gdp ~ year+city+year:city, data = data3)
+effect1 <- summary(model1)$coef[1]
+
+data3 <- data2 %>% filter(city == 0 , year == 1) # difference c == 0 anji after
+model2 <- lm(gdp ~ year+city+year:city, data = data3)
+effect2 <- summary(model2)$coef[1]
+
+data3 <- data2 %>% filter(city == 1 ,
+                          year == 0) # difference c == 1 tongxiang before
+model3 <- lm(gdp ~ year+city+year:city, data = data3)
+effect3 <- summary(model3)$coef[1]
+
+data3 <- data2 %>% filter(city == 1 , year == 1) # difference c == 1 tongxiang after
+model4 <- lm(gdp ~ year+city+year:city, data = data3)
+effect4 <- summary(model4)$coef[1]
+
+estimate_effect <- (effect4-effect3)-(effect2-effect1)
+estimate_effect
+
+effect1
+```
+
+##sample map in conclusion
+```{r 7}
+dat1 <- data.frame(name = regionNames("嘉兴")[1:6], value = runif(18))
+geojsonMap(dat1, mapName = "嘉兴", palette = "RdBu", colorMethod = "bin")
+```
+

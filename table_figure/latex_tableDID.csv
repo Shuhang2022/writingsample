@@ -1,0 +1,5 @@
+﻿DID regression,regression output,difference of treatment,net difference(effect)
+α + β1 + β2 + β3,2753.88,981.0667,422.8667
+α + β1 + 0,1772.813,,
+α + β2,1572.31,558.2,
+α,1014.11,,
