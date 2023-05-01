@@ -17,6 +17,7 @@ NOTES
                                 Source(data): \writingsample\data\
                                 Reference(data): \writingsample\data\cite
 		Output: \writingsample\table_figure\
-                                Output: TBD
+                                Output: The Effect of High Speed Railway on Local GDP: Evidence from Zhejiang, China(Contact author to view the paper)
+
                                 
  

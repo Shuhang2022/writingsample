@@ -15,6 +15,8 @@ output:
 library(lubridate)
 library(tidyverse)
 library(readxl)
+library(sandwich)
+library(lmtest)
 library(leaflet)  #leaflet map plot
 library(leafletCN) #geojsonMap 
 
@@ -23,14 +25,36 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ###did_hst_pass(city overall)
 ```{r 1}
+###data processing
+data <- read_excel("dd_hst_gdp.xlsx")
+data2 <- pivot_longer(!year, names_to = 'city', values_to = 'gdp', data=data)
+data3 <- data2%>%group_by(city)%>%summarise(year, city, gdp)
+data3 <- data3 %>% mutate(city_dmy = ifelse(city == "jiaxing_gdp" ,1, 0), year_dmy = ifelse(year >= 2009 ,1, 0), treat1 = year_dmy*city_dmy)
+
+###time series data plot and did for whole time period
+model_fit <- lm(gdp ~ year + city_dmy + treat1, data = data3)
+summary(model_fit)
+data3$fit = predict(model_fit)
+ggplot(data3, aes(year, gdp, color=city)) + 
+  geom_line()+
+  geom_line(aes(y=fit),linewidth=1)+
+  geom_vline(xintercept=2009)+
+  annotate(x=2009,y=+Inf,label="build",vjust=1,geom="label")
+
+model_fit2 <- lm(gdp ~ year_dmy + city_dmy + year_dmy*city_dmy, data = data3)
+summary(model_fit2)
+coeftest(model_fit2, vcov = sandwich)
+
+#####################################################################################
 df <- read_excel("dd_hst_gdp.xlsx")
+df <- df[-8:-12,]
 
 df2 <- pivot_longer(!year, names_to = 'city', values_to = 'gdp', data=df)
 ggplot(df2, aes(year, gdp, group=city, color=city)) + 
   geom_line()+
   geom_vline(xintercept=2009,linetype=5) +
   geom_vline(xintercept=2010)+
-  labs(x = "Years(2007-2013)", y = "GDP(100 million RMB)", title = "Comparision of Annual GDP split by City (overall)")+
+  labs(x = "Years(2007-2013)", y = "GDP(100 million RMB)", title = "")+
   annotate(x=2009,y=+Inf,label="build",vjust=1,geom="label")+
   annotate(x=2010,y=+Inf,label="open",vjust=1,geom="label")
 
@@ -43,7 +67,7 @@ ggplot(df5, aes(year, gdp, group=city, color=city)) +
   geom_line()+
   geom_vline(xintercept=2009,linetype=5) +
   geom_vline(xintercept=2010)+
-  labs(x = "Years(2009-2011)", y = "GDP(100 million RMB)", title = "DID of Annual GDP split by City with treatment effect")+
+  labs(x = "Years(2009-2011)", y = "GDP(100 million RMB)", title = "")+
   annotate(x=2009,y=+Inf,label="build",vjust=1,geom="label")+
   annotate(x=2010,y=+Inf,label="open",vjust=1,geom="label")
 
@@ -55,28 +79,45 @@ df8 <- pivot_longer(!year, names_to = 'city', values_to = 'gdp', data=df7)
 ggplot(df8, aes(year, gdp, group=city, color=city)) + 
   geom_line()+
   geom_vline(xintercept=2010)+
-  labs(x = "Years(2007-2013)", y = "GDP(100 million RMB)", title = "Comparision of Annual GDP split by City with treatment effect")+
+  labs(x = "Years(2007-2013)", y = "GDP(100 million RMB)", title = "")+
   annotate(x=2010,y=+Inf,label="open",vjust=1,geom="label")
 
 
 ```
 
-###did_hst_pass(city urban)
+###did_hst_pass(city urban)(limited time period fitted)
 ```{r 2}
 urban <- read_excel("dd_hst_gdp_urban.xlsx")
 urban2 <- pivot_longer(!year, names_to = 'city', values_to = 'gdp', data=urban)
-ggplot(urban2, aes(year, gdp, group=city, color=city)) + 
+
+urban3 <- urban2%>%group_by(city)%>%summarise(year, city, gdp)
+urban3 <- urban3 %>% mutate(city_dmy = ifelse(city == "jiaxing_gdp" ,1, 0), year_dmy = ifelse(year >= 2009 ,1, 0), treatubran = year_dmy*city_dmy)
+
+model_fit <- lm(gdp ~ year + city_dmy + treatubran, data = urban3)
+summary(model_fit)
+urban3$fit = predict(model_fit)
+
+ggplot(urban3, aes(year, gdp, group=city, color=city)) + 
   geom_line()+
+  geom_line(aes(y=fit),linewidth=1)+
   geom_vline(xintercept=2009,linetype=5) +
   geom_vline(xintercept=2010)+
   labs(x = "Years(2007-2013)", y = "GDP(100 million RMB)", title = "")+
   annotate(x=2009,y=+Inf,label="build",vjust=1,geom="label")+
   annotate(x=2010,y=+Inf,label="open",vjust=1,geom="label")
+
+model_fit2 <- lm(gdp ~ year_dmy + city_dmy + year_dmy*city_dmy, data = urban3)
+summary(model_fit2)
+coeftest(model_fit2, vcov = sandwich)
+
+
 ```
 
 ###did_hst_pass(suburban)
 ```{r 3}
 county <- read_excel("county_gdp.xlsx")
+county <-county[-8:-12,]
+
 county2 <- pivot_longer(!year, names_to = 'city', values_to = 'gdp', data=county)
 ggplot(county2, aes(year, gdp, group=city, color=city)) + 
   geom_line()+
@@ -111,12 +152,25 @@ ggplot(county8, aes(year, gdp, group=city, color=city)) +
   annotate(x=2010,y=+Inf,label="open",vjust=1,geom="label")
 ```
 
-###did_hst_pass(compare_urbanvssub)
+###did_hst_pass(compare_urbanvssub)(limited time period)
 ```{r 4}
 cpmare <- read_excel("cpmare_gdp_cityvssub.xlsx")
 cpmare2 <- pivot_longer(!year, names_to = 'city', values_to = 'gdp', data=cpmare)
+cpmare2 <- cpmare2%>%group_by(city)%>%summarise(year, city, gdp)
+cpmare2 <- cpmare2 %>% mutate(year_dmy = ifelse(year >= 2009 ,1, 0),
+                              city_dmy1 = ifelse(city == "anji_H_gdp" ,1, 0),
+                              city_dmy2 = ifelse(city == "huzhou_gdp" ,1, 0),
+                              city_dmy3 = ifelse(city == "jiaxing_gdp" ,1, 0),
+                              city_dmy4 = ifelse(city == "tongxinag_J_gdp" ,1, 0),treatcity = year_dmy*city_dmy1, treatcity2 = year_dmy*city_dmy2,treatcity3 = year_dmy*city_dmy3, treatcity4= year_dmy*city_dmy4)
+
+model <- lm(gdp ~ year+city_dmy1+city_dmy2+city_dmy3+city_dmy4+treatcity+treatcity2+treatcity3+treatcity4, data = cpmare2)
+summary(model)
+
+cpmare2$fit = predict(model)
+
 ggplot(cpmare2, aes(year, gdp, group=city, color=city)) + 
   geom_line()+
+  geom_line(aes(y=fit), size=1)+
   geom_vline(xintercept=2009,linetype=5) +
   geom_vline(xintercept=2010)+
   labs(x = "Years(2007-2013)", y = "GDP(100 million RMB)", title = "")+
@@ -126,82 +180,146 @@ ggplot(cpmare2, aes(year, gdp, group=city, color=city)) +
 
 ##map
 ```{r 5}
-dat1 <- data.frame(name = regionNames("嘉兴")[6], value = runif(18))
-geojsonMap(dat1, mapName = "嘉兴", palette = "RdBu", colorMethod = "bin")
 
-dat2 <- data.frame(name = regionNames("湖州")[1], value = runif(18))
-geojsonMap(dat2, mapName = "湖州", palette = "RdBu", colorMethod = "bin")
+dat1 <- data.frame(name = regionNames("浙江省")[10:11], value = runif(36))
+map1 <- geojsonMap(dat1, mapName = "浙江省", palette = "RdBu", colorMethod = "bin")
+
+map1 %>% addMarkers(lng = 120.16, lat = 30.2, popup = "Hangzhou")%>%
+  addMarkers(lng =  121.45806, lat = 31.22222, popup = "Shanghai")
 
 ```
 
 
-##math process city
+##math process city and time series plot
 ```{r 6}
+###data processing
 data <- read_excel("dd_hst_gdp.xlsx")
 data2 <- pivot_longer(!year, names_to = 'city', values_to = 'gdp', data=data)
+data3 <- data2%>%group_by(city)%>%summarise(year, city, gdp)
+data3 <- data3 %>% mutate(city_dmy = ifelse(city == "jiaxing_gdp" ,1, 0), year_dmy = ifelse(year >= 2009 ,1, 0), treat1 = year_dmy*city_dmy)
 
-data2$city <- ifelse(data2$city == "jiaxing_gdp" ,1, 0)
-data2$year <- ifelse(data2$year > 2009 ,1, 0)
+###time series data plot and did for whole time period
+model_fit <- lm(gdp ~ year + city_dmy + treat1, data = data3)
+summary(model_fit)
+data3$fit = predict(model_fit)
+ggplot(data3, aes(year, gdp, color=city)) + 
+  geom_line()+
+  geom_line(aes(y=fit),linewidth=1)+
+  geom_vline(xintercept=2009)+
+  annotate(x=2009,y=+Inf,label="build",vjust=1,geom="label")
 
-data3 <- data2 %>% filter(city == 0 , year == 0) # difference c == 0 huzhou before
-model1 <- lm(gdp ~ year+city+year:city, data = data3)
-effect1 <- summary(model1)$coef[1]
+###robust analysis and math on effect
+data4 <- data3 %>% filter(city_dmy == 0 , year_dmy == 0) # difference c == 0 huzhou before
+model1 <- lm(gdp ~ year_dmy + city_dmy + year_dmy*city_dmy, data = data4)
+effect1 <- coeftest(model1, vcov = sandwich)[1]
 
-data3 <- data2 %>% filter(city == 0 , year == 1) # difference c == 0 huzhou after
-model2 <- lm(gdp ~ year+city+year:city, data = data3)
-effect2 <- summary(model2)$coef[1]
+data4 <- data3 %>% filter(city_dmy == 0 , year_dmy == 0) # difference c == 0 huzhou after
+model2 <- lm(gdp ~ year_dmy + city_dmy + year_dmy*city_dmy, data = data4)
+effect2 <- coeftest(model2, vcov = sandwich)[1]
 
-data3 <- data2 %>% filter(city == 1 ,
-                          year == 0) # difference c == 1 jiaxing before
-model3 <- lm(gdp ~ year+city+year:city, data = data3)
-effect3 <- summary(model3)$coef[1]
+data4 <- data3 %>% filter(city_dmy == 1 , year_dmy == 0) # difference c == 1 jiaxing before
+model3 <- lm(gdp ~ year_dmy + city_dmy + year_dmy*city_dmy, data = data4)
+effect3 <- coeftest(model3, vcov = sandwich)[1]
 
-data3 <- data2 %>% filter(city == 1 , year == 1) # difference c == 1 jiaxing after
-model4 <- lm(gdp ~ year+city+year:city, data = data3)
-effect4 <- summary(model4)$coef[1]
+data4 <- data3 %>% filter(city_dmy == 1 , year_dmy == 1) # difference c == 1 jiaxing after
+model4 <- lm(gdp ~ year_dmy + city_dmy + year_dmy*city_dmy, data = data4)
+effect4 <- coeftest(model4, vcov = sandwich)[1]
 
 estimate_effect <- (effect4-effect3)-(effect2-effect1)
 estimate_effect
-
-effect4
 
 ```
 
-##math process sub
+##math process sub and time series plot
 ```{r 7}
+###data processing
 data <- read_excel("county_gdp.xlsx")
-
 data2 <- pivot_longer(!year, names_to = 'city', values_to = 'gdp', data=data)
+data3 <- data2%>%group_by(city)%>%summarise(year, city, gdp)
+data3 <- data3 %>% mutate(city_dmy = ifelse(city == "tongxinag_J_gdp" ,1, 0), year_dmy = ifelse(year >= 2009 ,1, 0), treat2 = year_dmy*city_dmy)
 
-data2$city <- ifelse(data2$city == "tongxinag_J_gdp" ,1, 0)
-data2$year <- ifelse(data2$year > 2009 ,1, 0)
+###time series data plot and did for whole time period
+model_fit <- lm(gdp ~ year + city_dmy + treat2, data = data3)
+summary(model_fit)
+data3$fit = predict(model_fit)
+ggplot(data3, aes(year, gdp, color=city)) + 
+  geom_line()+
+  geom_line(aes(y=fit),linewidth=1)+
+  geom_vline(xintercept=2009)
 
-data3 <- data2 %>% filter(city == 0 , year == 0) # difference c == 0 anji before
-model1 <- lm(gdp ~ year+city+year:city, data = data3)
-effect1 <- summary(model1)$coef[1]
 
-data3 <- data2 %>% filter(city == 0 , year == 1) # difference c == 0 anji after
-model2 <- lm(gdp ~ year+city+year:city, data = data3)
-effect2 <- summary(model2)$coef[1]
+model_fit2 <- lm(gdp ~ year_dmy + city_dmy + year_dmy*city_dmy, data = data3)
+summary(model_fit2)
+coeftest(model_fit2, vcov = sandwich)
 
-data3 <- data2 %>% filter(city == 1 ,
-                          year == 0) # difference c == 1 tongxiang before
-model3 <- lm(gdp ~ year+city+year:city, data = data3)
-effect3 <- summary(model3)$coef[1]
 
-data3 <- data2 %>% filter(city == 1 , year == 1) # difference c == 1 tongxiang after
-model4 <- lm(gdp ~ year+city+year:city, data = data3)
-effect4 <- summary(model4)$coef[1]
+###robust analysis and math on effect
+data4 <- data3 %>% filter(city_dmy == 0 , year_dmy == 0) # difference c == 0 anji before
+model1 <- lm(gdp ~ year_dmy + city_dmy + year_dmy*city_dmy, data = data4)
+effect1 <- coeftest(model1, vcov = sandwich)[1]
+
+data4 <- data3 %>% filter(city_dmy == 0 , year_dmy == 0) # difference c == 0 anji after
+model2 <- lm(gdp ~ year_dmy + city_dmy + year_dmy*city_dmy, data = data4)
+effect2 <- coeftest(model2, vcov = sandwich)[1]
+
+data4 <- data3 %>% filter(city_dmy == 1 , year_dmy == 0) # difference c == 1 tongxiang before
+model3 <- lm(gdp ~ year_dmy + city_dmy + year_dmy*city_dmy, data = data4)
+effect3 <- coeftest(model3, vcov = sandwich)[1]
+
+data4 <- data3 %>% filter(city_dmy == 1 , year_dmy == 1) # difference c == 1 tongxiang after
+model4 <- lm(gdp ~ year_dmy + city_dmy + year_dmy*city_dmy, data = data4)
+effect4 <- coeftest(model4, vcov = sandwich)[1]
 
 estimate_effect <- (effect4-effect3)-(effect2-effect1)
 estimate_effect
-
-effect1
 ```
 
 ##sample map in conclusion
 ```{r 7}
-dat1 <- data.frame(name = regionNames("嘉兴")[1:6], value = runif(18))
+dat1 <- data.frame(name = regionNames("嘉兴")[1:6], value = runif(36))
 geojsonMap(dat1, mapName = "嘉兴", palette = "RdBu", colorMethod = "bin")
+
+```
+
+
+###bias explore
+```{r 8}
+###data processing
+bias <- read_excel("bias_test.xlsx")
+bias <- bias[-8:-12,-3]
+bias2 <- pivot_longer(!year, names_to = 'city', values_to = 'gdp', data=bias)
+bias3 <- bias2%>%group_by(city)%>%summarise(year, city, gdp)
+bias3 <- bias3 %>% mutate(city_dmy = ifelse(city == "tongxinag_J_gdp" ,1, 0), year_dmy = ifelse(year >= 2009 ,1, 0))
+
+###time series data plot and did for whole time period
+model_fit <- lm(gdp ~ year_dmy + city_dmy + year_dmy*city_dmy, data = bias3)
+summary(model_fit)
+bias3$fit = predict(model_fit)
+ggplot(bias3, aes(year, gdp, color=city)) + 
+  geom_line()+
+  geom_line(aes(y=fit),linewidth=1)+
+  geom_vline(xintercept=2009)
+
+model_fit2 <- lm(gdp ~ year_dmy + city_dmy + year_dmy*city_dmy, data = bias3)
+summary(model_fit2)
+coeftest(model_fit2, vcov = sandwich)
+
+# linear trend ########################################################################################################
+
+###data processing
+bias <- read_excel("bias_test.xlsx")
+bias <- bias[-8:-12,-3]
+bias2 <- pivot_longer(!year, names_to = 'city', values_to = 'gdp', data=bias)
+bias3 <- bias2%>%group_by(city)%>%summarise(year, city, gdp)
+bias3 <- bias3 %>% mutate(city_dmy = ifelse(city == "tongxinag_J_gdp" ,1, 0), year_dmy = ifelse(year >= 2009 ,1, 0))%>%mutate(treat = year_dmy*city_dmy)
+
+###time series data plot and did for whole time period
+model_fit <- lm(gdp ~ year + city_dmy + treat, data = bias3)
+summary(model_fit)
+bias3$fit = predict(model_fit)
+ggplot(bias3, aes(year, gdp, color=city)) + 
+  geom_line()+
+  geom_line(aes(y=fit),linewidth=1)+
+  geom_vline(xintercept=2009)
 ```
 
