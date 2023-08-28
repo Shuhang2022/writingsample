@@ -1,5 +1,5 @@
 ---
-title: "Final Project/writing sample"
+title: "Final Project Econ497/writing sample"
 author: "shuhang"
 date: "2023-04-06"
 output:
